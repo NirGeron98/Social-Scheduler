@@ -10,7 +10,7 @@ const App = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [error, setError] = useState(false);
-  const [view, setView] = useState('home'); // אפשרויות: 'home', 'create', 'join', 'event'
+  const [view, setView] = useState('home');
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const timeSlots = [
@@ -46,7 +46,7 @@ const App = () => {
     }));
     setCurrentMeetingCode(newCode);
     setNewMeetingName('');
-    setView('event'); // מעבר לעמוד האירוע
+    setView('event');
   };
 
   const joinMeeting = () => {
@@ -54,7 +54,7 @@ const App = () => {
       alert('Invalid meeting code!');
       return;
     }
-    setView('event'); // מעבר לעמוד האירוע
+    setView('event');
   };
 
   const selectDay = (day) => {
@@ -76,9 +76,9 @@ const App = () => {
 
     setSelectedSlots((prev) => {
       if (prev.includes(time)) {
-        return prev.filter((slot) => slot !== time); // Remove if already selected
+        return prev.filter((slot) => slot !== time);
       } else {
-        return [...prev, time]; // Add if not selected
+        return [...prev, time];
       }
     });
   };
@@ -103,7 +103,6 @@ const App = () => {
 
     currentMeeting.participants.push(newParticipant);
 
-    // עדכון זמן מועדף
     const availabilityCount = {};
     currentMeeting.participants.forEach((participant) => {
       participant.availableSlots.forEach((slot) => {
@@ -133,6 +132,15 @@ const App = () => {
     alert('Your availability has been saved! You can add more days and times.');
   };
 
+  const getParticipantsForSlot = (day, time) => {
+    const currentMeeting = meetings[currentMeetingCode];
+    return currentMeeting.participants.filter((participant) =>
+      participant.availableSlots.some(
+        (slot) => slot.day === day && slot.times.includes(time)
+      )
+    );
+  };
+
   if (view === 'home') {
     return (
       <Box sx={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
@@ -160,58 +168,6 @@ const App = () => {
     );
   }
 
-  if (view === 'create') {
-    return (
-      <Box sx={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
-          Create a New Meeting
-        </Typography>
-        <TextField
-          label="Meeting Name"
-          variant="outlined"
-          fullWidth
-          value={newMeetingName}
-          onChange={(e) => setNewMeetingName(e.target.value)}
-          sx={{ marginBottom: '10px' }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={createNewMeeting}
-          fullWidth
-        >
-          Create Meeting
-        </Button>
-      </Box>
-    );
-  }
-
-  if (view === 'join') {
-    return (
-      <Box sx={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
-          Join a Meeting
-        </Typography>
-        <TextField
-          label="Meeting Code"
-          variant="outlined"
-          fullWidth
-          value={currentMeetingCode}
-          onChange={(e) => setCurrentMeetingCode(e.target.value.trim().toUpperCase())}
-          sx={{ marginBottom: '10px' }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={joinMeeting}
-          fullWidth
-        >
-          Join Meeting
-        </Button>
-      </Box>
-    );
-  }
-
   if (view === 'event') {
     const currentMeeting = meetings[currentMeetingCode];
     return (
@@ -228,77 +184,46 @@ const App = () => {
             <Typography variant="body1">
               {currentMeeting.recommendedSlot.day} at {currentMeeting.recommendedSlot.time}
             </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ marginTop: '10px' }}>
+              Participants available at this time:
+            </Typography>
+            {getParticipantsForSlot(
+              currentMeeting.recommendedSlot.day,
+              currentMeeting.recommendedSlot.time
+            ).map((participant, index) => (
+              <Typography key={index} variant="body2" sx={{ marginLeft: '10px' }}>
+                - {participant.name}
+              </Typography>
+            ))}
           </Paper>
         )}
 
         <Paper elevation={3} sx={{ padding: '20px', marginBottom: '20px' }}>
           <Typography variant="h5" gutterBottom>
-            Enter Your Name
+            Participants Who Voted
           </Typography>
-          <TextField
-            label="Your Name"
-            variant="outlined"
-            fullWidth
-            value={currentName}
-            onChange={(e) => setCurrentName(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          {error && (
-            <Typography variant="body2" color="error">
-              Please enter your name before selecting days or times!
+          {currentMeeting.participants.length > 0 ? (
+            <Box sx={{ textAlign: 'left', padding: '10px' }}>
+              {currentMeeting.participants.map((participant, index) => (
+                <Box key={index} sx={{ marginBottom: '10px', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
+                  <Typography variant="h6">{participant.name}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Availability:
+                  </Typography>
+                  {participant.availableSlots.map((slot, slotIndex) => (
+                    <Typography key={slotIndex} variant="body2" sx={{ marginLeft: '10px' }}>
+                      - {slot.day}: {slot.times.join(', ')}
+                    </Typography>
+                  ))}
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              No participants have voted yet.
             </Typography>
           )}
         </Paper>
-
-        <Paper elevation={3} sx={{ padding: '20px', marginBottom: '20px' }}>
-          <Typography variant="h5" gutterBottom>
-            Select a Day
-          </Typography>
-          <Grid container spacing={2}>
-            {daysOfWeek.map((day) => (
-              <Grid item xs={4} key={day}>
-                <Button
-                  variant={selectedDay === day ? 'contained' : 'outlined'}
-                  onClick={() => selectDay(day)}
-                  fullWidth
-                >
-                  {day}
-                </Button>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-
-        {selectedDay && (
-          <Paper elevation={3} sx={{ padding: '20px', marginBottom: '20px' }}>
-            <Typography variant="h5" gutterBottom>
-              Select Time Slots for {selectedDay}
-            </Typography>
-            <Grid container spacing={2}>
-              {timeSlots.map((time) => (
-                <Grid item xs={4} key={time}>
-                  <Button
-                    variant={selectedSlots.includes(time) ? 'contained' : 'outlined'}
-                    onClick={() => toggleSlot(time)}
-                    fullWidth
-                  >
-                    {time}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
-        )}
-
-        <Button
-          variant="contained"
-          color="success"
-          onClick={addParticipant}
-          fullWidth
-          sx={{ marginTop: '20px' }}
-        >
-          Save Availability
-        </Button>
       </Box>
     );
   }
