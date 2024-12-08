@@ -1,26 +1,16 @@
-import React, { useState } from 'react';
-import { TextField, Button, Box, Typography, Paper, Grid } from '@mui/material';
+import React, { useState } from "react";
+import { TextField, Button, Box, Typography, Paper } from "@mui/material";
+import { database } from "./firebase";
+import { ref, set, get, update } from "firebase/database";
 
 const App = () => {
   const [meetings, setMeetings] = useState({});
-  const [currentMeetingCode, setCurrentMeetingCode] = useState('');
-  const [newMeetingName, setNewMeetingName] = useState('');
-  const [currentName, setCurrentName] = useState('');
-  const [selectedDay, setSelectedDay] = useState('');
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedSlots, setSelectedSlots] = useState([]);
-  const [error, setError] = useState(false);
-  const [view, setView] = useState('home');
-
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const timeSlots = [
-    '06:00-07:00', '07:00-08:00', '08:00-09:00',
-    '09:00-10:00', '10:00-11:00', '11:00-12:00',
-    '12:00-13:00', '13:00-14:00', '14:00-15:00',
-    '15:00-16:00', '16:00-17:00', '17:00-18:00',
-    '18:00-19:00', '19:00-20:00', '20:00-21:00',
-    '21:00-22:00', '22:00-23:00', '23:00-24:00'
-  ];
+  const [currentMeetingCode, setCurrentMeetingCode] = useState("");
+  const [newMeetingName, setNewMeetingName] = useState("");
+  const [currentName, setCurrentName] = useState("");
+  const [selectedDays, setSelectedDays] = useState([]); // Allow multiple days to be selected
+  const [selectedSlots, setSelectedSlots] = useState([]); // Allow multiple time slots to be selected
+  const [view, setView] = useState("home");
 
   const generateMeetingCode = () => {
     let code;
@@ -30,106 +20,89 @@ const App = () => {
     return code;
   };
 
-  const createNewMeeting = () => {
+  const createNewMeeting = async () => {
     if (!newMeetingName.trim()) {
-      alert('Please enter a meeting name!');
+      alert("Please enter a meeting name!");
       return;
     }
+
     const newCode = generateMeetingCode();
-    setMeetings((prev) => ({
-      ...prev,
-      [newCode]: {
-        name: newMeetingName.trim(),
-        participants: [],
-        recommendedSlot: null,
-      },
-    }));
-    setCurrentMeetingCode(newCode);
-    setNewMeetingName('');
-    setView('event');
-  };
-
-  const joinMeeting = () => {
-    if (!currentMeetingCode.trim() || !meetings[currentMeetingCode]) {
-      alert('Invalid meeting code!');
-      return;
-    }
-    setView('event');
-  };
-
-  const selectDay = (day) => {
-    if (!currentName.trim()) {
-      setError(true);
-      return;
-    }
-    setError(false);
-    setSelectedDay(day);
-    setSelectedSlots([]);
-  };
-
-  const toggleSlot = (time) => {
-    if (!currentName.trim()) {
-      setError(true);
-      return;
-    }
-    setError(false);
-
-    setSelectedSlots((prev) => {
-      if (prev.includes(time)) {
-        return prev.filter((slot) => slot !== time);
-      } else {
-        return [...prev, time];
-      }
-    });
-  };
-
-  const addParticipant = () => {
-    if (!currentName.trim()) {
-      alert('Please enter your name before saving!');
-      return;
-    }
-    if (selectedSlots.length === 0) {
-      alert('Please select at least one slot!');
-      return;
-    }
-
-    const updatedMeetings = { ...meetings };
-    const currentMeeting = updatedMeetings[currentMeetingCode];
-
-    const newParticipant = {
-      name: currentName.trim(),
-      availableSlots: [...availableSlots, { day: selectedDay, times: selectedSlots }],
+    const meetingData = {
+      name: newMeetingName,
+      participants: [],
     };
 
-    currentMeeting.participants.push(newParticipant);
+    await set(ref(database, `meetings/${newCode}`), meetingData);
+    setMeetings((prev) => ({
+      ...prev,
+      [newCode]: meetingData,
+    }));
+    setCurrentMeetingCode(newCode);
+    setNewMeetingName("");
+    setView("event");
+  };
 
-    const availabilityCount = {};
-    currentMeeting.participants.forEach((participant) => {
-      participant.availableSlots.forEach((slot) => {
-        slot.times.forEach((time) => {
-          const key = `${slot.day}-${time}`;
-          availabilityCount[key] = (availabilityCount[key] || 0) + 1;
-        });
+  const joinMeeting = async () => {
+    if (!currentMeetingCode.trim()) {
+      alert("Please enter a meeting code!");
+      return;
+    }
+
+    try {
+      const meetingRef = ref(database, `meetings/${currentMeetingCode}`);
+      const snapshot = await get(meetingRef);
+
+      if (!snapshot.exists()) {
+        throw new Error("Meeting not found");
+      }
+
+      const meeting = snapshot.val();
+      setMeetings((prev) => ({ ...prev, [currentMeetingCode]: meeting }));
+      setView("event");
+    } catch (error) {
+      alert("Error joining meeting: " + error.message);
+    }
+  };
+
+  const addParticipant = async () => {
+    if (!currentName.trim() || selectedSlots.length === 0 || selectedDays.length === 0) {
+      alert("Please fill in your name, select days and time slots");
+      return;
+    }
+
+    try {
+      const currentMeeting = meetings[currentMeetingCode];
+      const updatedParticipants = [
+        ...currentMeeting.participants,
+        {
+          name: currentName,
+          availableSlots: selectedDays.map((day) => ({
+            day,
+            times: selectedSlots,
+          })),
+        },
+      ];
+
+      await update(ref(database, `meetings/${currentMeetingCode}`), {
+        participants: updatedParticipants,
       });
-    });
 
-    const mostAvailableSlot = Object.entries(availabilityCount).reduce(
-      (max, entry) => (entry[1] > max[1] ? entry : max),
-      ['', 0]
-    )[0];
+      setMeetings((prev) => ({
+        ...prev,
+        [currentMeetingCode]: {
+          ...currentMeeting,
+          participants: updatedParticipants,
+        },
+      }));
 
-    currentMeeting.recommendedSlot = mostAvailableSlot
-      ? {
-          day: mostAvailableSlot.split('-')[0],
-          time: mostAvailableSlot.split('-')[1],
-        }
-      : null;
-
-    setMeetings(updatedMeetings);
-    setAvailableSlots([]);
-    setSelectedSlots([]);
-    setSelectedDay('');
-    alert('Your availability has been saved! You can add more days and times.');
+      alert("Participant added successfully!");
+      
+      // After saving, reset the days and slots, but keep the name
+      setSelectedDays([]);
+      setSelectedSlots([]);
+    } catch (error) {
+      alert("Error adding participant: " + error.message);
+    }
   };
 
   const getParticipantsForSlot = (day, time) => {
@@ -141,89 +114,182 @@ const App = () => {
     );
   };
 
-  if (view === 'home') {
+  const handleDaySelect = (day) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const handleTimeSelect = (time) => {
+    setSelectedSlots((prev) =>
+      prev.includes(time) ? prev.filter((slot) => slot !== time) : [...prev, time]
+    );
+  };
+
+  const handleSave = () => {
+    if (selectedSlots.length === 0) {
+      alert("Please select time slots.");
+      return;
+    }
+    addParticipant();
+  };
+
+  const getMostAvailableTime = () => {
+    const currentMeeting = meetings[currentMeetingCode];
+    if (!currentMeeting || !currentMeeting.participants) return;
+
+    let timeSlots = [];
+
+    // Loop over participants and their available time slots
+    currentMeeting.participants.forEach((participant) => {
+      participant.availableSlots.forEach((slot) => {
+        slot.times.forEach((time) => {
+          const key = `${slot.day} ${time}`;
+          timeSlots[key] = (timeSlots[key] || 0) + 1;
+        });
+      });
+    });
+
+    // Find the most available time
+    const mostAvailableTime = Object.entries(timeSlots).reduce(
+      (acc, [key, count]) => (count > acc.count ? { time: key, count } : acc),
+      { time: "", count: 0 }
+    );
+
+    return mostAvailableTime;
+  };
+
+  if (view === "home") {
     return (
-      <Box sx={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+      <Box
+        sx={{
+          padding: "20px",
+          maxWidth: "600px",
+          margin: "0 auto",
+          textAlign: "center",
+        }}
+      >
         <Typography variant="h3" gutterBottom>
           Social Scheduler
         </Typography>
+
+        <TextField
+          label="Enter Meeting Name"
+          variant="outlined"
+          fullWidth
+          value={newMeetingName}
+          onChange={(e) => setNewMeetingName(e.target.value)}
+          sx={{ marginBottom: "10px" }}
+        />
         <Button
           variant="contained"
           color="primary"
-          onClick={() => setView('create')}
+          onClick={createNewMeeting}
           fullWidth
-          sx={{ marginBottom: '10px' }}
+          sx={{ marginBottom: "20px" }}
         >
           Create New Meeting
         </Button>
-        <Button
+
+        <TextField
+          label="Enter Meeting Code"
           variant="outlined"
-          color="secondary"
-          onClick={() => setView('join')}
           fullWidth
-        >
-          Join Meeting with Code
+          value={currentMeetingCode}
+          onChange={(e) => setCurrentMeetingCode(e.target.value)}
+          sx={{ marginBottom: "10px" }}
+        />
+        <Button variant="outlined" color="secondary" onClick={joinMeeting} fullWidth>
+          Join Meeting
         </Button>
       </Box>
     );
   }
 
-  if (view === 'event') {
+  if (view === "event") {
     const currentMeeting = meetings[currentMeetingCode];
+    const mostAvailableTime = getMostAvailableTime();
     return (
-      <Box sx={{ padding: '20px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+      <Box
+        sx={{
+          padding: "20px",
+          maxWidth: "600px",
+          margin: "0 auto",
+          textAlign: "center",
+        }}
+      >
         <Typography variant="h4" gutterBottom>
-          Meeting: {currentMeeting?.name || ''} ({currentMeetingCode})
+          Meeting: {currentMeeting?.name || ""} ({currentMeetingCode})
         </Typography>
 
-        {currentMeeting.recommendedSlot && (
-          <Paper elevation={3} sx={{ padding: '20px', marginBottom: '20px', backgroundColor: '#e0ffe0' }}>
+        <TextField
+          label="Enter Your Name"
+          variant="outlined"
+          fullWidth
+          value={currentName}
+          onChange={(e) => setCurrentName(e.target.value)}
+          sx={{ marginBottom: "20px" }}
+        />
+
+        <Typography variant="h6">Select Days:</Typography>
+        <Box sx={{ marginBottom: "20px" }}>
+          {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
+            <Button
+              key={day}
+              variant={selectedDays.includes(day) ? "contained" : "outlined"}
+              color="primary"
+              sx={{ margin: "5px" }}
+              onClick={() => handleDaySelect(day)}
+            >
+              {day}
+            </Button>
+          ))}
+        </Box>
+
+        <Typography variant="h6">Select Time Slots:</Typography>
+        <Box sx={{ marginBottom: "20px" }}>
+          {Array.from({ length: 24 }, (_, i) => {
+            const time = `${String(i).padStart(2, "0")}:00-${String(i + 1).padStart(2, "0")}:00`;
+            return (
+              <Button
+                key={time}
+                variant={selectedSlots.includes(time) ? "contained" : "outlined"}
+                color="secondary"
+                sx={{ margin: "5px" }}
+                onClick={() => handleTimeSelect(time)}
+              >
+                {time}
+              </Button>
+            );
+          })}
+        </Box>
+
+        <Button variant="contained" color="primary" onClick={handleSave}>
+          Save
+        </Button>
+
+        {mostAvailableTime.time && (
+          <Paper
+            elevation={3}
+            sx={{ marginTop: "20px", padding: "20px", backgroundColor: "#e0ffe0" }}
+          >
             <Typography variant="h5" color="green" gutterBottom>
               Most Available Time:
             </Typography>
-            <Typography variant="body1">
-              {currentMeeting.recommendedSlot.day} at {currentMeeting.recommendedSlot.time}
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ marginTop: '10px' }}>
+            <Typography variant="body1">{mostAvailableTime.time}</Typography>
+            <Typography variant="body2" color="textSecondary">
               Participants available at this time:
             </Typography>
             {getParticipantsForSlot(
-              currentMeeting.recommendedSlot.day,
-              currentMeeting.recommendedSlot.time
+              mostAvailableTime.time.split(" ")[0],
+              mostAvailableTime.time.split(" ")[1]
             ).map((participant, index) => (
-              <Typography key={index} variant="body2" sx={{ marginLeft: '10px' }}>
+              <Typography key={index} variant="body2" sx={{ marginLeft: "10px" }}>
                 - {participant.name}
               </Typography>
             ))}
           </Paper>
         )}
-
-        <Paper elevation={3} sx={{ padding: '20px', marginBottom: '20px' }}>
-          <Typography variant="h5" gutterBottom>
-            Participants Who Voted
-          </Typography>
-          {currentMeeting.participants.length > 0 ? (
-            <Box sx={{ textAlign: 'left', padding: '10px' }}>
-              {currentMeeting.participants.map((participant, index) => (
-                <Box key={index} sx={{ marginBottom: '10px', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}>
-                  <Typography variant="h6">{participant.name}</Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Availability:
-                  </Typography>
-                  {participant.availableSlots.map((slot, slotIndex) => (
-                    <Typography key={slotIndex} variant="body2" sx={{ marginLeft: '10px' }}>
-                      - {slot.day}: {slot.times.join(', ')}
-                    </Typography>
-                  ))}
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            <Typography variant="body2" color="textSecondary">
-              No participants have voted yet.
-            </Typography>
-          )}
-        </Paper>
       </Box>
     );
   }
