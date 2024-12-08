@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/Meeting-Website/static/js/main.051440b7.js",
+    "main.js": "/Meeting-Website/static/js/main.5ce00ec6.js",
     "index.html": "/Meeting-Website/index.html",
-    "main.051440b7.js.map": "/Meeting-Website/static/js/main.051440b7.js.map"
+    "main.5ce00ec6.js.map": "/Meeting-Website/static/js/main.5ce00ec6.js.map"
   },
   "entrypoints": [
-    "static/js/main.051440b7.js"
+    "static/js/main.5ce00ec6.js"
   ]
 }
