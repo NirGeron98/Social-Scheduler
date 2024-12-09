@@ -23,4 +23,4 @@ Social Scheduler is a web application that helps users create meetings and sched
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/meeting-website.git
+git clone https://github.com/NirGeron98/meeting-website.git
