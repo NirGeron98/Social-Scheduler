@@ -7,7 +7,7 @@
 
 **Social Scheduler** is a web application designed to simplify the process of scheduling meetings and coordinating availability among participants. This app allows users to create and join meetings, specify their availability, and determine the optimal time slot for everyone involved.
 
-🌐 **Live Demo**: [Social Scheduler](https://NirGeron98.github.io/Meeting-Website)
+🌐 **Live Demo**: [Visit Social Scheduler](https://NirGeron98.github.io/Social-Scheduler)
 
 ---
 
