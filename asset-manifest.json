@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/Social-Scheduler/static/js/main.4d3ae01a.js",
+    "main.js": "/Social-Scheduler/static/js/main.fbbc922a.js",
     "index.html": "/Social-Scheduler/index.html",
-    "main.4d3ae01a.js.map": "/Social-Scheduler/static/js/main.4d3ae01a.js.map"
+    "main.fbbc922a.js.map": "/Social-Scheduler/static/js/main.fbbc922a.js.map"
   },
   "entrypoints": [
-    "static/js/main.4d3ae01a.js"
+    "static/js/main.fbbc922a.js"
   ]
 }
