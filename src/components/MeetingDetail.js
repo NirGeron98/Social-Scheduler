@@ -1,49 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import ParticipantList from './ParticipantList';
+import React from 'react';
 import { Typography, Box } from '@mui/material';
 
-const MeetingDetail = () => {
-  const { code } = useParams(); // קבלת קוד המפגש מכתובת ה-URL
-  const [meeting, setMeeting] = useState(null);
-  const [loading, setLoading] = useState(true);
+const getMostAvailableTime = (participants) => {
+  const timeCount = {};
 
-  useEffect(() => {
-    const fetchMeeting = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/meetings/${code}`); // בקשה לשרת
-        if (!response.ok) {
-          throw new Error('Failed to fetch meeting');
-        }
-        const data = await response.json();
-        setMeeting(data);
-      } catch (error) {
-        console.error(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  participants.forEach((participant) => {
+    participant.availableSlots.forEach((slot) => {
+      slot.times.forEach((time) => {
+        const key = `${slot.day} ${time}`;
+        timeCount[key] = (timeCount[key] || 0) + 1;
+      });
+    });
+  });
 
-    fetchMeeting();
-  }, [code]);
-
-  if (loading) {
-    return <Typography>Loading...</Typography>;
+  let mostAvailable = { time: null, count: 0 };
+  for (const [key, count] of Object.entries(timeCount)) {
+    if (count > mostAvailable.count) {
+      mostAvailable = { time: key, count };
+    }
   }
 
-  if (!meeting) {
-    return <Typography>Meeting not found</Typography>;
-  }
+  return mostAvailable;
+};
+
+const MeetingDetail = ({ meeting }) => {
+  if (!meeting || !meeting.participants) return null;
+
+  const mostAvailable = getMostAvailableTime(meeting.participants);
 
   return (
-    <Box display="flex" flexDirection="row">
-      <Box flex="1" p={2}>
-        <Typography variant="h4">{meeting.name}</Typography>
-        {/* פרטים נוספים על המפגש */}
+    <Box>
+      <Typography variant="h4">Meeting: {meeting.name}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'row', marginTop: '20px' }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6">Participants:</Typography>
+          <ul>
+            {meeting.participants.map((participant, index) => (
+              <li key={index}>{participant.name}</li>
+            ))}
+          </ul>
+        </Box>
       </Box>
-      <Box flex="1" p={2} style={{ borderLeft: '1px solid #ddd' }}>
-        <ParticipantList participants={meeting.participants} />
-      </Box>
+      {mostAvailable.time ? (
+        <Box
+          sx={{
+            marginTop: '20px',
+            padding: '15px',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+            backgroundColor: '#e0ffe0',
+          }}
+        >
+          <Typography variant="h6">Most Available Time:</Typography>
+          <Typography variant="body1">{mostAvailable.time}</Typography>
+          <Typography variant="body2">
+            Participants available at this time:
+          </Typography>
+          <ul>
+            {meeting.participants
+              .filter((participant) =>
+                participant.availableSlots.some((slot) =>
+                  slot.times.includes(mostAvailable.time.split(' ')[1]) &&
+                  slot.day === mostAvailable.time.split(' ')[0]
+                )
+              )
+              .map((participant, index) => (
+                <li key={index}>{participant.name}</li>
+              ))}
+          </ul>
+        </Box>
+      ) : (
+        <Typography sx={{ marginTop: '20px' }}>No recommended time available.</Typography>
+      )}
     </Box>
   );
 };
