@@ -14,6 +14,23 @@ app.post('/meetings', (req, res) => {
   res.status(201).send({ message: 'Meeting created successfully', code });
 });
 
+app.post('/meetings/:code/participants', async (req, res) => {
+  const { code } = req.params;
+  const { name, userId, availableSlots } = req.body;
+
+  if (!meetings[code]) {
+    return res.status(404).send({ error: 'Meeting not found' });
+  }
+
+  meetings[code].participants.push({ name, availableSlots });
+
+  // Update user's meetings in Firebase
+  await database.ref(`users/${userId}/meetings/${code}`).set({ name: meetings[code].name });
+
+  res.send({ message: 'Participant added successfully' });
+});
+
+
 // Get meeting by code
 app.get('/meetings/:code', (req, res) => {
   const { code } = req.params;
