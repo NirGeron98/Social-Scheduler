@@ -2,14 +2,16 @@ import React, { useState } from "react";
 import { TextField, Button, Box, Typography, Paper } from "@mui/material";
 import { database } from "./firebase";
 import { ref, set, get, update } from "firebase/database";
+import ParticipantList from "./components/ParticipantList";
+
 
 const App = () => {
   const [meetings, setMeetings] = useState({});
   const [currentMeetingCode, setCurrentMeetingCode] = useState("");
   const [newMeetingName, setNewMeetingName] = useState("");
   const [currentName, setCurrentName] = useState("");
-  const [selectedDays, setSelectedDays] = useState([]); // Allow multiple days to be selected
-  const [selectedSlots, setSelectedSlots] = useState([]); // Allow multiple time slots to be selected
+  const [selectedDays, setSelectedDays] = useState([]);
+  const [selectedSlots, setSelectedSlots] = useState([]);
   const [view, setView] = useState("home");
 
   const generateMeetingCode = () => {
@@ -96,8 +98,6 @@ const App = () => {
       }));
 
       alert("Participant added successfully!");
-      
-      // After saving, reset the days and slots, but keep the name
       setSelectedDays([]);
       setSelectedSlots([]);
     } catch (error) {
@@ -140,7 +140,6 @@ const App = () => {
 
     let timeSlots = [];
 
-    // Loop over participants and their available time slots
     currentMeeting.participants.forEach((participant) => {
       participant.availableSlots.forEach((slot) => {
         slot.times.forEach((time) => {
@@ -150,7 +149,6 @@ const App = () => {
       });
     });
 
-    // Find the most available time
     const mostAvailableTime = Object.entries(timeSlots).reduce(
       (acc, [key, count]) => (count > acc.count ? { time: key, count } : acc),
       { time: "", count: 0 }
@@ -209,90 +207,114 @@ const App = () => {
   if (view === "event") {
     const currentMeeting = meetings[currentMeetingCode];
     const mostAvailableTime = getMostAvailableTime();
+  
     return (
       <Box
         sx={{
+          display: "flex",
+          flexDirection: "row",
           padding: "20px",
-          maxWidth: "600px",
+          maxWidth: "1200px",
           margin: "0 auto",
-          textAlign: "center",
         }}
       >
-        <Typography variant="h4" gutterBottom>
-          Meeting: {currentMeeting?.name || ""} ({currentMeetingCode})
-        </Typography>
-
-        <TextField
-          label="Enter Your Name"
-          variant="outlined"
-          fullWidth
-          value={currentName}
-          onChange={(e) => setCurrentName(e.target.value)}
-          sx={{ marginBottom: "20px" }}
-        />
-
-        <Typography variant="h6">Select Days:</Typography>
-        <Box sx={{ marginBottom: "20px" }}>
-          {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
-            <Button
-              key={day}
-              variant={selectedDays.includes(day) ? "contained" : "outlined"}
-              color="primary"
-              sx={{ margin: "5px" }}
-              onClick={() => handleDaySelect(day)}
-            >
-              {day}
-            </Button>
-          ))}
-        </Box>
-
-        <Typography variant="h6">Select Time Slots:</Typography>
-        <Box sx={{ marginBottom: "20px" }}>
-          {Array.from({ length: 24 }, (_, i) => {
-            const time = `${String(i).padStart(2, "0")}:00-${String(i + 1).padStart(2, "0")}:00`;
-            return (
+        <Box
+          sx={{
+            flex: 3,
+            marginRight: "20px",
+          }}
+        >
+          <Typography variant="h4" gutterBottom>
+            Meeting: {currentMeeting?.name || ""} ({currentMeetingCode})
+          </Typography>
+  
+          <TextField
+            label="Enter Your Name"
+            variant="outlined"
+            fullWidth
+            value={currentName}
+            onChange={(e) => setCurrentName(e.target.value)}
+            sx={{ marginBottom: "20px" }}
+          />
+  
+          <Typography variant="h6">Select Days:</Typography>
+          <Box sx={{ marginBottom: "20px" }}>
+            {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
               <Button
-                key={time}
-                variant={selectedSlots.includes(time) ? "contained" : "outlined"}
-                color="secondary"
+                key={day}
+                variant={selectedDays.includes(day) ? "contained" : "outlined"}
+                color="primary"
                 sx={{ margin: "5px" }}
-                onClick={() => handleTimeSelect(time)}
+                onClick={() => handleDaySelect(day)}
               >
-                {time}
+                {day}
               </Button>
-            );
-          })}
-        </Box>
-
-        <Button variant="contained" color="primary" onClick={handleSave}>
-          Save
-        </Button>
-
-        {mostAvailableTime.time && (
-          <Paper
-            elevation={3}
-            sx={{ marginTop: "20px", padding: "20px", backgroundColor: "#e0ffe0" }}
-          >
-            <Typography variant="h5" color="green" gutterBottom>
-              Most Available Time:
-            </Typography>
-            <Typography variant="body1">{mostAvailableTime.time}</Typography>
-            <Typography variant="body2" color="textSecondary">
-              Participants available at this time:
-            </Typography>
-            {getParticipantsForSlot(
-              mostAvailableTime.time.split(" ")[0],
-              mostAvailableTime.time.split(" ")[1]
-            ).map((participant, index) => (
-              <Typography key={index} variant="body2" sx={{ marginLeft: "10px" }}>
-                - {participant.name}
-              </Typography>
             ))}
-          </Paper>
-        )}
+          </Box>
+  
+          <Typography variant="h6">Select Time Slots:</Typography>
+          <Box sx={{ marginBottom: "20px" }}>
+            {Array.from({ length: 24 }, (_, i) => {
+              const time = `${String(i).padStart(2, "0")}:00-${String(i + 1).padStart(2, "0")}:00`;
+              return (
+                <Button
+                  key={time}
+                  variant={selectedSlots.includes(time) ? "contained" : "outlined"}
+                  color="secondary"
+                  sx={{ margin: "5px" }}
+                  onClick={() => handleTimeSelect(time)}
+                >
+                  {time}
+                </Button>
+              );
+            })}
+          </Box>
+  
+          <Button variant="contained" color="primary" onClick={handleSave}>
+            Save
+          </Button>
+  
+          {mostAvailableTime.time && (
+            <Paper
+              elevation={3}
+              sx={{ marginTop: "20px", padding: "20px", backgroundColor: "#e0ffe0" }}
+            >
+              <Typography variant="h5" color="green" gutterBottom>
+                Most Available Time:
+              </Typography>
+              <Typography variant="body1">{mostAvailableTime.time}</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Participants available at this time:
+              </Typography>
+              {getParticipantsForSlot(
+                mostAvailableTime.time.split(" ")[0],
+                mostAvailableTime.time.split(" ")[1]
+              ).map((participant, index) => (
+                <Typography key={index} variant="body2" sx={{ marginLeft: "10px" }}>
+                  - {participant.name}
+                </Typography>
+              ))}
+            </Paper>
+          )}
+        </Box>
+  
+        <Box
+          sx={{
+            flex: 1,
+            padding: "10px",
+            borderLeft: "1px solid #ddd",
+            maxHeight: "400px",
+            overflowY: "auto",
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            Participants:
+          </Typography>
+          <ParticipantList participants={currentMeeting.participants} />
+        </Box>
       </Box>
     );
-  }
+  }  
 
   return null;
 };

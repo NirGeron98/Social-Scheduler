@@ -1,5 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
+
 
 // Firebase configuration
 const firebaseConfig = {
@@ -10,13 +12,15 @@ const firebaseConfig = {
   messagingSenderId: "92561301343",
   appId: "1:92561301343:web:11ffd654fd74d9263f60ea",
   measurementId: "G-PL924913WS",
-  databaseURL: "https://meeting-website-7c7e3-default-rtdb.firebaseio.com/"  // Correct URL
+  databaseURL: "https://meeting-website-7c7e3-default-rtdb.firebaseio.com/"  
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Realtime Database
+// Initialize Realtime Database and Authentication
 const database = getDatabase(app);
+const auth = getAuth();
 
-export { database };
+
+export { database, auth };

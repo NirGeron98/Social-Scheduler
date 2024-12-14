@@ -2,17 +2,24 @@ import React from 'react';
 import { Typography } from '@mui/material';
 
 const ParticipantList = ({ participants }) => {
+  if (!participants || !Array.isArray(participants) || participants.length === 0) {
+    return <Typography variant="body1">No participants yet.</Typography>;
+  }
+
   return (
     <div>
-      <Typography variant="h6">Participants:</Typography>
       {participants.map((participant, index) => (
-        <div key={index} style={{ marginBottom: '10px', padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}>
-          <Typography variant="body1">Name: {participant.name}</Typography>
+        <div
+          key={index}
+          style={{
+            marginBottom: '5px',
+            padding: '5px',
+            border: '1px solid #ddd',
+            borderRadius: '5px',
+          }}
+        >
           <Typography variant="body2">
-            Available Days: {Object.keys(participant.availableDays).filter((day) => participant.availableDays[day]).join(', ')}
-          </Typography>
-          <Typography variant="body2">
-            Available Times: {Object.keys(participant.availableTimes).filter((time) => participant.availableTimes[time]).join(', ')}
+            {index + 1}. {participant.name}
           </Typography>
         </div>
       ))}
