@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/Meeting-Website/static/js/main.f86a2456.js",
+    "main.js": "/Meeting-Website/static/js/main.f845018a.js",
     "index.html": "/Meeting-Website/index.html",
-    "main.f86a2456.js.map": "/Meeting-Website/static/js/main.f86a2456.js.map"
+    "main.f845018a.js.map": "/Meeting-Website/static/js/main.f845018a.js.map"
   },
   "entrypoints": [
-    "static/js/main.f86a2456.js"
+    "static/js/main.f845018a.js"
   ]
 }
