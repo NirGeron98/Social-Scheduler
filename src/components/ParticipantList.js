@@ -2,7 +2,7 @@ import React from 'react';
 import { Typography } from '@mui/material';
 
 const ParticipantList = ({ participants }) => {
-  if (!participants || !Array.isArray(participants) || participants.length === 0) {
+  if (!participants || participants.length === 0) {
     return <Typography variant="body1">No participants yet.</Typography>;
   }
 

@@ -4,7 +4,6 @@ import { database } from "./firebase";
 import { ref, set, get, update } from "firebase/database";
 import ParticipantList from "./components/ParticipantList";
 
-
 const App = () => {
   const [meetings, setMeetings] = useState({});
   const [currentMeetingCode, setCurrentMeetingCode] = useState("");
@@ -69,37 +68,36 @@ const App = () => {
   const getParticipantsForSlot = (day, time) => {
     const currentMeeting = meetings[currentMeetingCode];
     if (!currentMeeting || !currentMeeting.participants) return [];
-  
+
     return currentMeeting.participants.filter((participant) =>
       participant.availableSlots.some(
         (slot) => slot.day === day && slot.times.includes(time)
       )
     );
   };
-  
 
   const addParticipant = async () => {
     if (!currentName.trim() || selectedSlots.length === 0 || selectedDays.length === 0) {
       alert("Please fill in your name, select days and time slots");
       return;
     }
-  
+
     try {
       const currentMeeting = meetings[currentMeetingCode];
       const existingParticipants = currentMeeting.participants || [];
-  
+
       const participantIndex = existingParticipants.findIndex(
         (participant) => participant.name.trim().toLowerCase() === currentName.trim().toLowerCase()
       );
-  
+
       const newAvailableSlots = selectedDays.map((day) => ({
         day,
         times: selectedSlots,
       }));
-  
+
       if (participantIndex !== -1) {
         const existingSlots = existingParticipants[participantIndex].availableSlots;
-  
+
         const mergedSlots = [...existingSlots, ...newAvailableSlots].reduce((acc, slot) => {
           const existingSlot = acc.find((s) => s.day === slot.day);
           if (existingSlot) {
@@ -109,7 +107,7 @@ const App = () => {
           }
           return acc;
         }, []);
-  
+
         existingParticipants[participantIndex].availableSlots = mergedSlots;
       } else {
         existingParticipants.push({
@@ -117,11 +115,11 @@ const App = () => {
           availableSlots: newAvailableSlots,
         });
       }
-  
+
       await update(ref(database, `meetings/${currentMeetingCode}`), {
         participants: existingParticipants,
       });
-  
+
       setMeetings((prev) => ({
         ...prev,
         [currentMeetingCode]: {
@@ -129,7 +127,7 @@ const App = () => {
           participants: existingParticipants,
         },
       }));
-  
+
       alert("Participant added successfully!");
       setSelectedDays([]);
       setSelectedSlots([]);
@@ -137,9 +135,6 @@ const App = () => {
       alert("Error adding participant: " + error.message);
     }
   };
-  
-  
-  
 
   const handleDaySelect = (day) => {
     setSelectedDays((prev) =>
@@ -159,29 +154,6 @@ const App = () => {
       return;
     }
     addParticipant();
-  };
-
-  const getMostAvailableTime = () => {
-    const currentMeeting = meetings[currentMeetingCode];
-    if (!currentMeeting || !currentMeeting.participants) return;
-
-    let timeSlots = [];
-
-    currentMeeting.participants.forEach((participant) => {
-      participant.availableSlots.forEach((slot) => {
-        slot.times.forEach((time) => {
-          const key = `${slot.day} ${time}`;
-          timeSlots[key] = (timeSlots[key] || 0) + 1;
-        });
-      });
-    });
-
-    const mostAvailableTime = Object.entries(timeSlots).reduce(
-      (acc, [key, count]) => (count > acc.count ? { time: key, count } : acc),
-      { time: "", count: 0 }
-    );
-
-    return mostAvailableTime;
   };
 
   if (view === "home") {
@@ -233,8 +205,6 @@ const App = () => {
 
   if (view === "event") {
     const currentMeeting = meetings[currentMeetingCode];
-    const mostAvailableTime = getMostAvailableTime();
-  
     return (
       <Box
         sx={{
@@ -254,7 +224,7 @@ const App = () => {
           <Typography variant="h4" gutterBottom>
             Meeting: {currentMeeting?.name || ""} ({currentMeetingCode})
           </Typography>
-  
+
           <TextField
             label="Enter Your Name"
             variant="outlined"
@@ -263,7 +233,7 @@ const App = () => {
             onChange={(e) => setCurrentName(e.target.value)}
             sx={{ marginBottom: "20px" }}
           />
-  
+
           <Typography variant="h6">Select Days:</Typography>
           <Box sx={{ marginBottom: "20px" }}>
             {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
@@ -278,7 +248,7 @@ const App = () => {
               </Button>
             ))}
           </Box>
-  
+
           <Typography variant="h6">Select Time Slots:</Typography>
           <Box sx={{ marginBottom: "20px" }}>
             {Array.from({ length: 24 }, (_, i) => {
@@ -296,35 +266,12 @@ const App = () => {
               );
             })}
           </Box>
-  
+
           <Button variant="contained" color="primary" onClick={handleSave}>
             Save
           </Button>
-  
-          {mostAvailableTime.time && (
-            <Paper
-              elevation={3}
-              sx={{ marginTop: "20px", padding: "20px", backgroundColor: "#e0ffe0" }}
-            >
-              <Typography variant="h5" color="green" gutterBottom>
-                Most Available Time:
-              </Typography>
-              <Typography variant="body1">{mostAvailableTime.time}</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Participants available at this time:
-              </Typography>
-              {getParticipantsForSlot(
-                mostAvailableTime.time.split(" ")[0],
-                mostAvailableTime.time.split(" ")[1]
-              ).map((participant, index) => (
-                <Typography key={index} variant="body2" sx={{ marginLeft: "10px" }}>
-                  - {participant.name}
-                </Typography>
-              ))}
-            </Paper>
-          )}
         </Box>
-  
+
         <Box
           sx={{
             flex: 1,
@@ -337,63 +284,13 @@ const App = () => {
           <Typography variant="h6" gutterBottom>
             Participants:
           </Typography>
-          <ParticipantList participants={currentMeeting.participants} />
+          <ParticipantList participants={currentMeeting?.participants || []} />
         </Box>
       </Box>
     );
-  }  
+  }
 
   return null;
 };
-
-const fixDuplicateParticipants = async () => {
-  try {
-    const meetingsRef = ref(database, "meetings");
-    const snapshot = await get(meetingsRef);
-
-    if (!snapshot.exists()) {
-      console.log("No meetings found.");
-      return;
-    }
-
-    const meetings = snapshot.val();
-
-    Object.keys(meetings).forEach((meetingId) => {
-      const meeting = meetings[meetingId];
-      if (meeting.participants) {
-        const fixedParticipants = [];
-        meeting.participants.forEach((participant) => {
-          const existingParticipant = fixedParticipants.find(
-            (p) => p.name.trim().toLowerCase() === participant.name.trim().toLowerCase()
-          );
-          if (existingParticipant) {
-            participant.availableSlots.forEach((slot) => {
-              const existingSlot = existingParticipant.availableSlots.find(
-                (s) => s.day === slot.day
-              );
-              if (existingSlot) {
-                existingSlot.times = Array.from(
-                  new Set([...existingSlot.times, ...slot.times])
-                );
-              } else {
-                existingParticipant.availableSlots.push(slot);
-              }
-            });
-          } else {
-            fixedParticipants.push(participant);
-          }
-        });
-        meeting.participants = fixedParticipants;
-      }
-    });
-
-    await update(meetingsRef, meetings);
-    console.log("Data fixed successfully.");
-  } catch (error) {
-    console.error("Error fixing data:", error.message);
-  }
-};
-
-fixDuplicateParticipants();
 
 export default App;
