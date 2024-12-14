@@ -66,37 +66,70 @@ const App = () => {
     }
   };
 
+  const getParticipantsForSlot = (day, time) => {
+    const currentMeeting = meetings[currentMeetingCode];
+    if (!currentMeeting || !currentMeeting.participants) return [];
+  
+    return currentMeeting.participants.filter((participant) =>
+      participant.availableSlots.some(
+        (slot) => slot.day === day && slot.times.includes(time)
+      )
+    );
+  };
+  
+
   const addParticipant = async () => {
     if (!currentName.trim() || selectedSlots.length === 0 || selectedDays.length === 0) {
       alert("Please fill in your name, select days and time slots");
       return;
     }
-
+  
     try {
       const currentMeeting = meetings[currentMeetingCode];
-      const updatedParticipants = [
-        ...currentMeeting.participants,
-        {
-          name: currentName,
-          availableSlots: selectedDays.map((day) => ({
-            day,
-            times: selectedSlots,
-          })),
-        },
-      ];
-
+      const existingParticipants = currentMeeting.participants || [];
+  
+      const participantIndex = existingParticipants.findIndex(
+        (participant) => participant.name.trim().toLowerCase() === currentName.trim().toLowerCase()
+      );
+  
+      const newAvailableSlots = selectedDays.map((day) => ({
+        day,
+        times: selectedSlots,
+      }));
+  
+      if (participantIndex !== -1) {
+        const existingSlots = existingParticipants[participantIndex].availableSlots;
+  
+        const mergedSlots = [...existingSlots, ...newAvailableSlots].reduce((acc, slot) => {
+          const existingSlot = acc.find((s) => s.day === slot.day);
+          if (existingSlot) {
+            existingSlot.times = Array.from(new Set([...existingSlot.times, ...slot.times]));
+          } else {
+            acc.push(slot);
+          }
+          return acc;
+        }, []);
+  
+        existingParticipants[participantIndex].availableSlots = mergedSlots;
+      } else {
+        existingParticipants.push({
+          name: currentName.trim(),
+          availableSlots: newAvailableSlots,
+        });
+      }
+  
       await update(ref(database, `meetings/${currentMeetingCode}`), {
-        participants: updatedParticipants,
+        participants: existingParticipants,
       });
-
+  
       setMeetings((prev) => ({
         ...prev,
         [currentMeetingCode]: {
           ...currentMeeting,
-          participants: updatedParticipants,
+          participants: existingParticipants,
         },
       }));
-
+  
       alert("Participant added successfully!");
       setSelectedDays([]);
       setSelectedSlots([]);
@@ -104,15 +137,9 @@ const App = () => {
       alert("Error adding participant: " + error.message);
     }
   };
-
-  const getParticipantsForSlot = (day, time) => {
-    const currentMeeting = meetings[currentMeetingCode];
-    return currentMeeting.participants.filter((participant) =>
-      participant.availableSlots.some(
-        (slot) => slot.day === day && slot.times.includes(time)
-      )
-    );
-  };
+  
+  
+  
 
   const handleDaySelect = (day) => {
     setSelectedDays((prev) =>
@@ -318,5 +345,55 @@ const App = () => {
 
   return null;
 };
+
+const fixDuplicateParticipants = async () => {
+  try {
+    const meetingsRef = ref(database, "meetings");
+    const snapshot = await get(meetingsRef);
+
+    if (!snapshot.exists()) {
+      console.log("No meetings found.");
+      return;
+    }
+
+    const meetings = snapshot.val();
+
+    Object.keys(meetings).forEach((meetingId) => {
+      const meeting = meetings[meetingId];
+      if (meeting.participants) {
+        const fixedParticipants = [];
+        meeting.participants.forEach((participant) => {
+          const existingParticipant = fixedParticipants.find(
+            (p) => p.name.trim().toLowerCase() === participant.name.trim().toLowerCase()
+          );
+          if (existingParticipant) {
+            participant.availableSlots.forEach((slot) => {
+              const existingSlot = existingParticipant.availableSlots.find(
+                (s) => s.day === slot.day
+              );
+              if (existingSlot) {
+                existingSlot.times = Array.from(
+                  new Set([...existingSlot.times, ...slot.times])
+                );
+              } else {
+                existingParticipant.availableSlots.push(slot);
+              }
+            });
+          } else {
+            fixedParticipants.push(participant);
+          }
+        });
+        meeting.participants = fixedParticipants;
+      }
+    });
+
+    await update(meetingsRef, meetings);
+    console.log("Data fixed successfully.");
+  } catch (error) {
+    console.error("Error fixing data:", error.message);
+  }
+};
+
+fixDuplicateParticipants();
 
 export default App;
