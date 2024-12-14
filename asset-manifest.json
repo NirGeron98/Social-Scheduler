@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/Meeting-Website/static/js/main.f845018a.js",
-    "index.html": "/Meeting-Website/index.html",
-    "main.f845018a.js.map": "/Meeting-Website/static/js/main.f845018a.js.map"
+    "main.js": "/Social-Scheduler/static/js/main.d381ae91.js",
+    "index.html": "/Social-Scheduler/index.html",
+    "main.d381ae91.js.map": "/Social-Scheduler/static/js/main.d381ae91.js.map"
   },
   "entrypoints": [
-    "static/js/main.f845018a.js"
+    "static/js/main.d381ae91.js"
   ]
 }
