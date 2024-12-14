@@ -1,24 +1,23 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDAZi3PkBpBPgZwckektUOrRewqiYX_vic",
-  authDomain: "meeting-website-7c7e3.firebaseapp.com",
-  databaseURL: "https://meeting-website-7c7e3-default-rtdb.firebaseio.com",
-  projectId: "meeting-website-7c7e3",
-  storageBucket: "meeting-website-7c7e3.firebasestorage.app",
-  messagingSenderId: "92561301343",
-  appId: "1:92561301343:web:11ffd654fd74d9263f60ea",
-  measurementId: "G-PL924913WS"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
-export { database };
+// Initialize services
+const auth = getAuth(app);
+const database = getDatabase(app);
+
+export { auth, database };
